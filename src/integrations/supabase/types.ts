@@ -127,6 +127,125 @@ export type Database = {
         }
         Relationships: []
       }
+      coupon_redemptions: {
+        Row: {
+          coupon_id: string
+          created_at: string
+          discount_amount: number
+          id: string
+          order_id: string
+          user_id: string
+        }
+        Insert: {
+          coupon_id: string
+          created_at?: string
+          discount_amount: number
+          id?: string
+          order_id: string
+          user_id: string
+        }
+        Update: {
+          coupon_id?: string
+          created_at?: string
+          discount_amount?: number
+          id?: string
+          order_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_discount: number | null
+          min_order_amount: number
+          per_user_limit: number
+          times_used: number
+          type: Database["public"]["Enums"]["coupon_type"]
+          updated_at: string
+          usage_limit: number | null
+          value: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_discount?: number | null
+          min_order_amount?: number
+          per_user_limit?: number
+          times_used?: number
+          type: Database["public"]["Enums"]["coupon_type"]
+          updated_at?: string
+          usage_limit?: number | null
+          value: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_discount?: number | null
+          min_order_amount?: number
+          per_user_limit?: number
+          times_used?: number
+          type?: Database["public"]["Enums"]["coupon_type"]
+          updated_at?: string
+          usage_limit?: number | null
+          value?: number
+        }
+        Relationships: []
+      }
+      delivery_areas: {
+        Row: {
+          area_name: string
+          created_at: string
+          delivery_fee: number
+          eta_minutes: number
+          id: string
+          is_active: boolean
+          pincode: string
+          updated_at: string
+        }
+        Insert: {
+          area_name: string
+          created_at?: string
+          delivery_fee?: number
+          eta_minutes?: number
+          id?: string
+          is_active?: boolean
+          pincode: string
+          updated_at?: string
+        }
+        Update: {
+          area_name?: string
+          created_at?: string
+          delivery_fee?: number
+          eta_minutes?: number
+          id?: string
+          is_active?: boolean
+          pincode?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           id: string
@@ -210,13 +329,17 @@ export type Database = {
       orders: {
         Row: {
           address: Json
+          coupon_code: string | null
           created_at: string
+          customer_phone: string | null
           delivery_cents: number
+          discount_amount: number
           discount_cents: number
           id: string
           notes: string | null
           order_number: string
           payment_status: Database["public"]["Enums"]["payment_status"]
+          pincode: string | null
           razorpay_order_id: string | null
           razorpay_payment_id: string | null
           status: Database["public"]["Enums"]["order_status"]
@@ -227,13 +350,17 @@ export type Database = {
         }
         Insert: {
           address: Json
+          coupon_code?: string | null
           created_at?: string
+          customer_phone?: string | null
           delivery_cents?: number
+          discount_amount?: number
           discount_cents?: number
           id?: string
           notes?: string | null
           order_number?: string
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          pincode?: string | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
@@ -244,13 +371,17 @@ export type Database = {
         }
         Update: {
           address?: Json
+          coupon_code?: string | null
           created_at?: string
+          customer_phone?: string | null
           delivery_cents?: number
+          discount_amount?: number
           discount_cents?: number
           id?: string
           notes?: string | null
           order_number?: string
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          pincode?: string | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
@@ -411,6 +542,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "customer"
+      coupon_type: "percent" | "flat"
       order_status:
         | "placed"
         | "confirmed"
@@ -547,6 +679,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "customer"],
+      coupon_type: ["percent", "flat"],
       order_status: [
         "placed",
         "confirmed",

@@ -1,6 +1,6 @@
 import { Link, Outlet, createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { Leaf, LayoutDashboard, Package, ListTree, ShoppingBag, Users, Settings, ArrowLeft } from "lucide-react";
+import { Leaf, LayoutDashboard, Package, ListTree, ShoppingBag, Users, Settings, ArrowLeft, MapPin, Ticket, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,9 @@ function AdminLayout() {
           <NavItem to="/admin/categories" icon={<ListTree className="h-4 w-4" />}>Categories</NavItem>
           <NavItem to="/admin/orders" icon={<ShoppingBag className="h-4 w-4" />}>Orders</NavItem>
           <NavItem to="/admin/customers" icon={<Users className="h-4 w-4" />}>Customers</NavItem>
+          <NavItem to="/admin/coupons" icon={<Ticket className="h-4 w-4" />}>Coupons</NavItem>
+          <NavItem to="/admin/delivery-areas" icon={<MapPin className="h-4 w-4" />}>Delivery areas</NavItem>
+          <NavItem to="/admin/reports" icon={<BarChart3 className="h-4 w-4" />}>Reports</NavItem>
           <NavItem to="/admin/settings" icon={<Settings className="h-4 w-4" />}>Settings</NavItem>
         </nav>
         <div className="p-3">
@@ -60,7 +63,9 @@ function AdminLayout() {
         <div className="md:hidden sticky top-0 z-20 flex gap-2 overflow-x-auto border-b bg-card p-2">
           {[
             ["/admin", "Dashboard"], ["/admin/products", "Products"], ["/admin/categories", "Categories"],
-            ["/admin/orders", "Orders"], ["/admin/customers", "Customers"], ["/admin/settings", "Settings"],
+            ["/admin/orders", "Orders"], ["/admin/customers", "Customers"],
+            ["/admin/coupons", "Coupons"], ["/admin/delivery-areas", "Areas"], ["/admin/reports", "Reports"],
+            ["/admin/settings", "Settings"],
           ].map(([to, label]) => (
             <Link key={to} to={to} className="shrink-0 rounded-md px-3 py-1.5 text-xs hover:bg-secondary" activeProps={{ className: "bg-primary text-primary-foreground" }} activeOptions={{ exact: to === "/admin" }}>
               {label}
