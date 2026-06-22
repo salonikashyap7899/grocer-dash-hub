@@ -143,7 +143,8 @@ export const verifyPayment = createServerFn({ method: "POST" })
     const computed = [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
     if (computed !== data.razorpaySignature) throw new Error("Invalid payment signature");
 
-    const { error } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
       .from("orders")
       .update({ payment_status: "paid", status: "confirmed", razorpay_payment_id: data.razorpayPaymentId })
       .eq("id", data.orderId).eq("user_id", context.userId);
