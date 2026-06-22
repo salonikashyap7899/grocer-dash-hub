@@ -7,8 +7,8 @@ const rangeSchema = z.object({
   to: z.string().datetime().optional(),
 });
 
-async function ensureAdmin(ctx: { supabase: ReturnType<typeof Object>; userId: string }) {
-  // @ts-expect-error duck typing
+type Ctx = { supabase: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: boolean | null }> }; userId: string };
+async function ensureAdmin(ctx: Ctx) {
   const { data } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "admin" });
   if (!data) throw new Error("Forbidden");
 }
