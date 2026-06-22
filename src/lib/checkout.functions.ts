@@ -112,7 +112,8 @@ export const placeOrder = createServerFn({ method: "POST" })
       });
       if (!rpRes.ok) throw new Error("Failed to create Razorpay order");
       const rpJson = (await rpRes.json()) as { id: string; amount: number };
-      await supabase.from("orders").update({ razorpay_order_id: rpJson.id }).eq("id", order.id);
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.from("orders").update({ razorpay_order_id: rpJson.id }).eq("id", order.id);
       razorpay = { keyId, orderId: rpJson.id, amount: rpJson.amount };
     }
 
@@ -142,7 +143,8 @@ export const verifyPayment = createServerFn({ method: "POST" })
     const computed = [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
     if (computed !== data.razorpaySignature) throw new Error("Invalid payment signature");
 
-    const { error } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
       .from("orders")
       .update({ payment_status: "paid", status: "confirmed", razorpay_payment_id: data.razorpayPaymentId })
       .eq("id", data.orderId).eq("user_id", context.userId);
@@ -158,7 +160,8 @@ export const clearCartAfterCOD = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { orderId: string }) => z.object({ orderId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await context.supabase.from("orders").update({ status: "confirmed" }).eq("id", data.orderId).eq("user_id", context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("orders").update({ status: "confirmed" }).eq("id", data.orderId).eq("user_id", context.userId);
     await context.supabase.from("cart_items").delete().eq("user_id", context.userId);
     return { ok: true };
   });
