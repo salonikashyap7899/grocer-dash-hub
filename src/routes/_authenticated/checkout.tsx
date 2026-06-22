@@ -8,13 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { formatINR } from "@/lib/format";
 import { useCart } from "@/hooks/use-cart";
 import { useAuth } from "@/hooks/use-auth";
 import { useSettings } from "@/hooks/use-settings";
 import { supabase } from "@/integrations/supabase/client";
-import { placeOrder, verifyPayment, clearCartAfterCOD } from "@/lib/checkout.functions";
+import { placeOrder, verifyPayment, clearCartAfterCOD, validateCoupon } from "@/lib/checkout.functions";
 import { toast } from "sonner";
+import { Tag, X, Clock } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/checkout")({
   head: () => ({ meta: [{ title: "Checkout — FreshCart" }] }),
@@ -34,16 +36,16 @@ function Checkout() {
   const placeFn = useServerFn(placeOrder);
   const verifyFn = useServerFn(verifyPayment);
   const codFn = useServerFn(clearCartAfterCOD);
-
-  const free = settings ? subtotal >= settings.free_delivery_threshold_cents : false;
-  const delivery = items.length === 0 ? 0 : free ? 0 : settings?.delivery_fee_cents ?? 0;
-  const total = subtotal + delivery;
+  const validateCouponFn = useServerFn(validateCoupon);
 
   const [addressId, setAddressId] = useState<string>("");
   const [pay, setPay] = useState<"cod" | "razorpay">("razorpay");
   const [notes, setNotes] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [applied, setApplied] = useState<{ code: string; discountCents: number } | null>(null);
 
   const [na, setNa] = useState({ full_name: "", phone: "", line1: "", line2: "", city: "", state: "", pincode: "" });
 
@@ -56,10 +58,39 @@ function Checkout() {
     },
   });
 
+  const { data: areas } = useQuery({
+    queryKey: ["delivery_areas"],
+    queryFn: async () => {
+      const { data } = await supabase.from("delivery_areas").select("pincode, area_name, delivery_fee, eta_minutes, is_active").eq("is_active", true);
+      return data ?? [];
+    },
+  });
+
+  const selectedAddress = addresses?.find((a) => a.id === addressId);
+  const matchedArea = selectedAddress ? areas?.find((a) => a.pincode === selectedAddress.pincode) : undefined;
+  const free = settings ? subtotal >= settings.free_delivery_threshold_cents : false;
+  const areaFeeCents = matchedArea ? Math.round(Number(matchedArea.delivery_fee) * 100) : (settings?.delivery_fee_cents ?? 0);
+  const delivery = items.length === 0 ? 0 : free ? 0 : areaFeeCents;
+  const discount = applied?.discountCents ?? 0;
+  const total = Math.max(0, subtotal + delivery - discount);
+
   useEffect(() => {
     if (addresses && addresses.length && !addressId) setAddressId(addresses[0].id);
     if (addresses && addresses.length === 0) setShowNew(true);
   }, [addresses, addressId]);
+
+  useEffect(() => {
+    if (selectedAddress?.phone && !phone) setPhone(selectedAddress.phone);
+  }, [selectedAddress, phone]);
+
+  // Re-validate applied coupon when subtotal changes
+  useEffect(() => {
+    if (!applied) return;
+    validateCouponFn({ data: { code: applied.code, subtotalCents: subtotal } })
+      .then((r) => setApplied({ code: r.code, discountCents: r.discountCents }))
+      .catch(() => setApplied(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotal]);
 
   const addAddress = async () => {
     if (!user) return;
@@ -76,12 +107,32 @@ function Checkout() {
     refetch();
   };
 
+  const applyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    try {
+      const r = await validateCouponFn({ data: { code, subtotalCents: subtotal } });
+      setApplied({ code: r.code, discountCents: r.discountCents });
+      toast.success(`Coupon ${r.code} applied — you saved ${formatINR(r.discountCents)}`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
   const checkout = async () => {
     if (!addressId) return toast.error("Add a delivery address");
+    if (!selectedAddress) return toast.error("Select an address");
+    if (!matchedArea) return toast.error(`We don't deliver to pincode ${selectedAddress.pincode} yet`);
+    if (!/^[6-9]\d{9}$/.test(phone)) return toast.error("Enter a valid 10-digit phone");
     if (items.length === 0) return toast.error("Your cart is empty");
     setLoading(true);
     try {
-      const res = await placeFn({ data: { addressId, paymentMethod: pay, notes } });
+      const res = await placeFn({ data: {
+        addressId, paymentMethod: pay, notes,
+        couponCode: applied?.code ?? null,
+        pincode: selectedAddress.pincode,
+        phone,
+      }});
       if (pay === "cod") {
         await codFn({ data: { orderId: res.orderId } });
         clear.mutate();
@@ -90,7 +141,6 @@ function Checkout() {
         nav({ to: "/orders/$id", params: { id: res.orderId } });
         return;
       }
-      // Razorpay
       if (!res.razorpay) throw new Error("Payment init failed");
       if (!window.Razorpay) throw new Error("Razorpay script not loaded");
       const rzp = new window.Razorpay({
@@ -100,7 +150,7 @@ function Checkout() {
         name: settings?.store_name ?? "FreshCart",
         description: `Order ${res.orderNumber}`,
         order_id: res.razorpay.orderId,
-        prefill: { email: user?.email },
+        prefill: { email: user?.email, contact: phone },
         theme: { color: "#16a34a" },
         handler: async (resp: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
           try {
@@ -146,16 +196,24 @@ function Checkout() {
 
               {addresses && addresses.length > 0 && (
                 <RadioGroup value={addressId} onValueChange={setAddressId} className="mt-3 space-y-2">
-                  {addresses.map((a) => (
-                    <label key={a.id} className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 ${addressId === a.id ? "border-primary bg-primary/5" : ""}`}>
-                      <RadioGroupItem value={a.id} className="mt-1" />
-                      <div className="text-sm">
-                        <div className="font-semibold">{a.label} • {a.full_name}</div>
-                        <div className="text-muted-foreground">{a.line1}{a.line2 ? `, ${a.line2}` : ""}, {a.city}, {a.state} {a.pincode}</div>
-                        <div className="text-muted-foreground">Phone: {a.phone}</div>
-                      </div>
-                    </label>
-                  ))}
+                  {addresses.map((a) => {
+                    const area = areas?.find((x) => x.pincode === a.pincode);
+                    return (
+                      <label key={a.id} className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 ${addressId === a.id ? "border-primary bg-primary/5" : ""}`}>
+                        <RadioGroupItem value={a.id} className="mt-1" />
+                        <div className="flex-1 text-sm">
+                          <div className="flex flex-wrap items-center gap-2 font-semibold">
+                            {a.label} • {a.full_name}
+                            {area
+                              ? <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" /> {area.eta_minutes} min • {area.area_name}</Badge>
+                              : <Badge variant="destructive">Not in delivery zone</Badge>}
+                          </div>
+                          <div className="text-muted-foreground">{a.line1}{a.line2 ? `, ${a.line2}` : ""}, {a.city}, {a.state} {a.pincode}</div>
+                          <div className="text-muted-foreground">Phone: {a.phone}</div>
+                        </div>
+                      </label>
+                    );
+                  })}
                 </RadioGroup>
               )}
 
@@ -170,9 +228,39 @@ function Checkout() {
                   <FieldRow label="Pincode" v={na.pincode} on={(v) => setNa({ ...na, pincode: v })} />
                   <div className="sm:col-span-2">
                     <Button onClick={addAddress}>Save address</Button>
+                    {areas && areas.length > 0 && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        We currently deliver to: {areas.map((a) => `${a.pincode} (${a.area_name})`).join(", ")}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
+            </section>
+
+            <section className="rounded-xl border bg-card p-4">
+              <h2 className="font-semibold">Contact number for delivery</h2>
+              <Input className="mt-3 max-w-xs" inputMode="numeric" maxLength={10} placeholder="10-digit mobile"
+                value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))} />
+            </section>
+
+            <section className="rounded-xl border bg-card p-4">
+              <div className="flex items-center gap-2 font-semibold"><Tag className="h-4 w-4" /> Apply coupon</div>
+              {applied ? (
+                <div className="mt-3 flex items-center justify-between rounded-lg border border-primary/40 bg-primary/5 p-3">
+                  <div>
+                    <div className="text-sm font-bold text-primary">{applied.code} applied</div>
+                    <div className="text-xs text-muted-foreground">You saved {formatINR(applied.discountCents)}</div>
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={() => setApplied(null)}><X className="h-4 w-4" /></Button>
+                </div>
+              ) : (
+                <div className="mt-3 flex gap-2">
+                  <Input placeholder="Enter coupon code" value={couponInput} onChange={(e) => setCouponInput(e.target.value.toUpperCase())} className="max-w-xs" />
+                  <Button onClick={applyCoupon} variant="secondary">Apply</Button>
+                </div>
+              )}
+              <p className="mt-2 text-xs text-muted-foreground">Try <b>WELCOME50</b> (₹50 off above ₹199) or <b>FRESH10</b> (10% off above ₹299).</p>
             </section>
 
             <section className="rounded-xl border bg-card p-4">
@@ -212,8 +300,16 @@ function Checkout() {
               <div className="mt-3 space-y-1 border-t pt-3 text-sm">
                 <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span>{formatINR(subtotal)}</span></div>
                 <div className="flex justify-between text-muted-foreground"><span>Delivery</span><span>{delivery === 0 ? "FREE" : formatINR(delivery)}</span></div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-primary"><span>Coupon ({applied?.code})</span><span>-{formatINR(discount)}</span></div>
+                )}
                 <div className="flex justify-between border-t pt-2 font-bold"><span>Total</span><span>{formatINR(total)}</span></div>
               </div>
+              {matchedArea && (
+                <div className="mt-3 rounded-md bg-secondary/60 p-2 text-xs text-muted-foreground">
+                  Estimated delivery in <b>{matchedArea.eta_minutes} minutes</b> to {matchedArea.area_name}.
+                </div>
+              )}
             </div>
             <Button size="lg" className="w-full" disabled={loading || items.length === 0} onClick={checkout}>
               {loading ? "Processing…" : `Place order • ${formatINR(total)}`}
