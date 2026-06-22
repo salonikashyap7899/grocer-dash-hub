@@ -48,6 +48,9 @@ function AdminLayout() {
           <NavItem to="/admin/categories" icon={<ListTree className="h-4 w-4" />}>Categories</NavItem>
           <NavItem to="/admin/orders" icon={<ShoppingBag className="h-4 w-4" />}>Orders</NavItem>
           <NavItem to="/admin/customers" icon={<Users className="h-4 w-4" />}>Customers</NavItem>
+          <NavItem to="/admin/coupons" icon={<Ticket className="h-4 w-4" />}>Coupons</NavItem>
+          <NavItem to="/admin/delivery-areas" icon={<MapPin className="h-4 w-4" />}>Delivery areas</NavItem>
+          <NavItem to="/admin/reports" icon={<BarChart3 className="h-4 w-4" />}>Reports</NavItem>
           <NavItem to="/admin/settings" icon={<Settings className="h-4 w-4" />}>Settings</NavItem>
         </nav>
         <div className="p-3">
