@@ -64,7 +64,11 @@ function AdminProducts() {
     qc.invalidateQueries({ queryKey: ["admin-products"] });
   };
 
-  const edit = (p: typeof products extends Array<infer T> ? T : never) => {
+  const edit = (p: {
+    id: string; name: string; slug: string; description: string | null; unit: string;
+    price_cents: number; mrp_cents: number | null; stock: number; image_url: string | null;
+    category_id: string | null; active: boolean; featured: boolean;
+  }) => {
     setForm({
       id: p.id, name: p.name, slug: p.slug, description: p.description ?? "", unit: p.unit,
       price_cents: p.price_cents, mrp_cents: p.mrp_cents ?? 0, stock: p.stock, image_url: p.image_url ?? "",

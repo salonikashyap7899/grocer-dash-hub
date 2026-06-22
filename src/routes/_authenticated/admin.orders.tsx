@@ -24,7 +24,7 @@ function AdminOrders() {
     queryKey: ["admin-orders", filter],
     queryFn: async () => {
       let q = supabase.from("orders").select("*").order("created_at", { ascending: false });
-      if (filter !== "all") q = q.eq("status", filter);
+      if (filter !== "all") q = q.eq("status", filter as "placed" | "confirmed" | "packed" | "out_for_delivery" | "delivered" | "cancelled");
       return (await q).data ?? [];
     },
   });
@@ -40,7 +40,7 @@ function AdminOrders() {
   });
 
   const updateStatus = async (id: string, status: string) => {
-    const { error } = await supabase.from("orders").update({ status }).eq("id", id);
+    const { error } = await supabase.from("orders").update({ status: status as "placed" | "confirmed" | "packed" | "out_for_delivery" | "delivered" | "cancelled" }).eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Status updated");
     qc.invalidateQueries({ queryKey: ["admin-orders"] });
@@ -89,7 +89,7 @@ function AdminOrders() {
               <div className="mt-4 space-y-4 text-sm">
                 <div>
                   <div className="text-xs text-muted-foreground">Update status</div>
-                  <Select value={detail.order.status} onValueChange={(v) => updateStatus(detail.order.id, v)}>
+                  <Select value={detail.order!.status} onValueChange={(v) => updateStatus(detail.order!.id, v)}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>)}</SelectContent>
                   </Select>
