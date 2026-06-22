@@ -63,7 +63,9 @@ function AdminLayout() {
         <div className="md:hidden sticky top-0 z-20 flex gap-2 overflow-x-auto border-b bg-card p-2">
           {[
             ["/admin", "Dashboard"], ["/admin/products", "Products"], ["/admin/categories", "Categories"],
-            ["/admin/orders", "Orders"], ["/admin/customers", "Customers"], ["/admin/settings", "Settings"],
+            ["/admin/orders", "Orders"], ["/admin/customers", "Customers"],
+            ["/admin/coupons", "Coupons"], ["/admin/delivery-areas", "Areas"], ["/admin/reports", "Reports"],
+            ["/admin/settings", "Settings"],
           ].map(([to, label]) => (
             <Link key={to} to={to} className="shrink-0 rounded-md px-3 py-1.5 text-xs hover:bg-secondary" activeProps={{ className: "bg-primary text-primary-foreground" }} activeOptions={{ exact: to === "/admin" }}>
               {label}
