@@ -12,7 +12,8 @@ export const salesReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: z.input<typeof rangeSchema>) => rangeSchema.parse(d))
   .handler(async ({ data, context }) => {
-    await ensureAdmin(context);
+    const { data: isAdmin } = await context.supabase.rpc("is_admin");
+    if (!isAdmin) throw new Error("Forbidden");
     const from = data.from ?? new Date(Date.now() - 30 * 86400000).toISOString();
     const to = data.to ?? new Date().toISOString();
 
