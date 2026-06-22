@@ -72,7 +72,8 @@ export const placeOrder = createServerFn({ method: "POST" })
     let couponCode: string | null = null;
     if (data.couponCode) {
       const code = data.couponCode;
-      const { data: coupon } = await supabase
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: coupon } = await supabaseAdmin
         .from("coupons").select("*").eq("code", code).maybeSingle();
       if (!coupon) throw new Error("Invalid coupon code");
       if (!coupon.is_active) throw new Error("This coupon is no longer active");
@@ -84,12 +85,13 @@ export const placeOrder = createServerFn({ method: "POST" })
         throw new Error("This coupon's usage limit has been reached");
       }
       // per-user limit
-      const { count: userUsed } = await supabase
+      const { count: userUsed } = await supabaseAdmin
         .from("coupon_redemptions").select("*", { count: "exact", head: true })
         .eq("coupon_id", coupon.id).eq("user_id", userId);
       if ((userUsed ?? 0) >= coupon.per_user_limit) {
         throw new Error("You've already used this coupon");
       }
+
       if (coupon.type === "flat") {
         discountCents = Math.round(Number(coupon.value) * 100);
       } else {
@@ -228,7 +230,8 @@ export const validateCoupon = createServerFn({ method: "POST" })
   .inputValidator((d: { code: string; subtotalCents: number }) =>
     z.object({ code: z.string().trim().toUpperCase().min(1).max(40), subtotalCents: z.number().int().nonnegative() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: coupon } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: coupon } = await supabaseAdmin
       .from("coupons").select("*").eq("code", data.code).maybeSingle();
     if (!coupon) throw new Error("Invalid coupon code");
     if (!coupon.is_active) throw new Error("This coupon is no longer active");
@@ -236,10 +239,11 @@ export const validateCoupon = createServerFn({ method: "POST" })
     if (data.subtotalCents < Math.round(Number(coupon.min_order_amount) * 100)) {
       throw new Error(`Add items worth ₹${Number(coupon.min_order_amount).toFixed(0)} to use this coupon`);
     }
-    const { count: userUsed } = await context.supabase
+    const { count: userUsed } = await supabaseAdmin
       .from("coupon_redemptions").select("*", { count: "exact", head: true })
       .eq("coupon_id", coupon.id).eq("user_id", context.userId);
     if ((userUsed ?? 0) >= coupon.per_user_limit) throw new Error("You've already used this coupon");
+
 
     let discountCents = 0;
     if (coupon.type === "flat") discountCents = Math.round(Number(coupon.value) * 100);
