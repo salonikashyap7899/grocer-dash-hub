@@ -6,6 +6,9 @@ const placeOrderSchema = z.object({
   addressId: z.string().uuid(),
   paymentMethod: z.enum(["cod", "razorpay"]),
   notes: z.string().max(500).optional(),
+  couponCode: z.string().trim().toUpperCase().max(40).optional().nullable(),
+  pincode: z.string().trim().regex(/^\d{6}$/, "Enter a valid 6-digit pincode"),
+  phone: z.string().trim().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit phone"),
 });
 
 type LineItem = {
@@ -23,7 +26,6 @@ export const placeOrder = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Load cart items
     const { data: cart, error: cartErr } = await supabase
       .from("cart_items")
       .select("product_id, quantity, product:products(id,name,unit,price_cents,image_url,stock,active)")
@@ -31,7 +33,6 @@ export const placeOrder = createServerFn({ method: "POST" })
     if (cartErr) throw new Error(cartErr.message);
     if (!cart || cart.length === 0) throw new Error("Cart is empty");
 
-    // Validate stock
     const items: LineItem[] = [];
     for (const c of cart as Array<{ product_id: string; quantity: number; product: { id: string; name: string; unit: string | null; price_cents: number; image_url: string | null; stock: number; active: boolean } }>) {
       if (!c.product || !c.product.active) throw new Error("A product in your cart is unavailable");
@@ -46,21 +47,64 @@ export const placeOrder = createServerFn({ method: "POST" })
       });
     }
 
-    // Load address (must belong to user)
     const { data: addr, error: addrErr } = await supabase
       .from("addresses").select("*").eq("id", data.addressId).eq("user_id", userId).single();
     if (addrErr || !addr) throw new Error("Invalid address");
 
-    // Settings
+    // Validate pincode against delivery_areas
+    const { data: area } = await supabase
+      .from("delivery_areas")
+      .select("pincode, area_name, delivery_fee, eta_minutes, is_active")
+      .eq("pincode", data.pincode).maybeSingle();
+    if (!area || !area.is_active) throw new Error("Sorry, we don't deliver to this pincode yet.");
+
     const { data: settings } = await supabase
-      .from("settings").select("delivery_fee_cents,free_delivery_threshold_cents").eq("id", 1).single();
+      .from("settings").select("free_delivery_threshold_cents").eq("id", 1).single();
 
     const subtotal = items.reduce((s, i) => s + i.price_cents * i.quantity, 0);
     const free = settings ? subtotal >= settings.free_delivery_threshold_cents : false;
-    const delivery = free ? 0 : settings?.delivery_fee_cents ?? 0;
-    const total = subtotal + delivery;
+    const areaFeeCents = Math.round(Number(area.delivery_fee) * 100);
+    const delivery = free ? 0 : areaFeeCents;
 
-    // Create order
+    // Coupon validation (server-side)
+    let discountCents = 0;
+    let couponId: string | null = null;
+    let couponCode: string | null = null;
+    if (data.couponCode) {
+      const code = data.couponCode;
+      const { data: coupon } = await supabase
+        .from("coupons").select("*").eq("code", code).maybeSingle();
+      if (!coupon) throw new Error("Invalid coupon code");
+      if (!coupon.is_active) throw new Error("This coupon is no longer active");
+      if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) throw new Error("This coupon has expired");
+      if (subtotal < Math.round(Number(coupon.min_order_amount) * 100)) {
+        throw new Error(`Add items worth ₹${Number(coupon.min_order_amount).toFixed(0)} to use this coupon`);
+      }
+      if (coupon.usage_limit && coupon.times_used >= coupon.usage_limit) {
+        throw new Error("This coupon's usage limit has been reached");
+      }
+      // per-user limit
+      const { count: userUsed } = await supabase
+        .from("coupon_redemptions").select("*", { count: "exact", head: true })
+        .eq("coupon_id", coupon.id).eq("user_id", userId);
+      if ((userUsed ?? 0) >= coupon.per_user_limit) {
+        throw new Error("You've already used this coupon");
+      }
+      if (coupon.type === "flat") {
+        discountCents = Math.round(Number(coupon.value) * 100);
+      } else {
+        discountCents = Math.round((subtotal * Number(coupon.value)) / 100);
+        if (coupon.max_discount) {
+          discountCents = Math.min(discountCents, Math.round(Number(coupon.max_discount) * 100));
+        }
+      }
+      discountCents = Math.min(discountCents, subtotal);
+      couponId = coupon.id;
+      couponCode = coupon.code;
+    }
+
+    const total = Math.max(0, subtotal + delivery - discountCents);
+
     const { data: order, error: orderErr } = await supabase
       .from("orders")
       .insert({
@@ -68,15 +112,18 @@ export const placeOrder = createServerFn({ method: "POST" })
         subtotal_cents: subtotal,
         delivery_cents: delivery,
         total_cents: total,
+        discount_amount: discountCents / 100,
+        coupon_code: couponCode,
+        pincode: data.pincode,
+        customer_phone: data.phone,
         address: addr,
         notes: data.notes ?? null,
-        payment_status: data.paymentMethod === "cod" ? "pending" : "pending",
+        payment_status: "pending",
       })
       .select("id, order_number, total_cents")
       .single();
     if (orderErr || !order) throw new Error(orderErr?.message ?? "Could not create order");
 
-    // Insert order items
     const { error: itemsErr } = await supabase.from("order_items").insert(
       items.map((i) => ({
         order_id: order.id,
@@ -90,13 +137,24 @@ export const placeOrder = createServerFn({ method: "POST" })
     );
     if (itemsErr) throw new Error(itemsErr.message);
 
-    // For Razorpay: create a Razorpay order via REST
+    // Record coupon redemption + bump usage counter (admin client to update counter)
+    if (couponId) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.from("coupon_redemptions").insert({
+        coupon_id: couponId, user_id: userId, order_id: order.id,
+        discount_amount: discountCents / 100,
+      });
+      await supabaseAdmin.rpc;
+      // increment times_used
+      const { data: cur } = await supabaseAdmin.from("coupons").select("times_used").eq("id", couponId).single();
+      await supabaseAdmin.from("coupons").update({ times_used: (cur?.times_used ?? 0) + 1 }).eq("id", couponId);
+    }
+
     let razorpay: { keyId: string; orderId: string; amount: number } | null = null;
     if (data.paymentMethod === "razorpay") {
       const keyId = process.env.RAZORPAY_KEY_ID;
       const keySecret = process.env.RAZORPAY_KEY_SECRET;
       if (!keyId || !keySecret) {
-        // mark order so admin sees it, but bubble a clear error
         throw new Error("Online payment is not configured yet. Please choose Cash on Delivery.");
       }
       const auth = btoa(`${keyId}:${keySecret}`);
@@ -150,9 +208,7 @@ export const verifyPayment = createServerFn({ method: "POST" })
       .eq("id", data.orderId).eq("user_id", context.userId);
     if (error) throw new Error(error.message);
 
-    // Clear cart
     await context.supabase.from("cart_items").delete().eq("user_id", context.userId);
-
     return { ok: true };
   });
 
@@ -164,4 +220,33 @@ export const clearCartAfterCOD = createServerFn({ method: "POST" })
     await supabaseAdmin.from("orders").update({ status: "confirmed" }).eq("id", data.orderId).eq("user_id", context.userId);
     await context.supabase.from("cart_items").delete().eq("user_id", context.userId);
     return { ok: true };
+  });
+
+// Validate coupon for live preview during checkout
+export const validateCoupon = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { code: string; subtotalCents: number }) =>
+    z.object({ code: z.string().trim().toUpperCase().min(1).max(40), subtotalCents: z.number().int().nonnegative() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: coupon } = await context.supabase
+      .from("coupons").select("*").eq("code", data.code).maybeSingle();
+    if (!coupon) throw new Error("Invalid coupon code");
+    if (!coupon.is_active) throw new Error("This coupon is no longer active");
+    if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) throw new Error("Coupon expired");
+    if (data.subtotalCents < Math.round(Number(coupon.min_order_amount) * 100)) {
+      throw new Error(`Add items worth ₹${Number(coupon.min_order_amount).toFixed(0)} to use this coupon`);
+    }
+    const { count: userUsed } = await context.supabase
+      .from("coupon_redemptions").select("*", { count: "exact", head: true })
+      .eq("coupon_id", coupon.id).eq("user_id", context.userId);
+    if ((userUsed ?? 0) >= coupon.per_user_limit) throw new Error("You've already used this coupon");
+
+    let discountCents = 0;
+    if (coupon.type === "flat") discountCents = Math.round(Number(coupon.value) * 100);
+    else {
+      discountCents = Math.round((data.subtotalCents * Number(coupon.value)) / 100);
+      if (coupon.max_discount) discountCents = Math.min(discountCents, Math.round(Number(coupon.max_discount) * 100));
+    }
+    discountCents = Math.min(discountCents, data.subtotalCents);
+    return { code: coupon.code, description: coupon.description, discountCents };
   });
