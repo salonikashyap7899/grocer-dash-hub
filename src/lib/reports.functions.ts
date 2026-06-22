@@ -7,10 +7,9 @@ const rangeSchema = z.object({
   to: z.string().datetime().optional(),
 });
 
-type Ctx = { supabase: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: boolean | null }> }; userId: string };
-async function ensureAdmin(ctx: Ctx) {
-  const { data } = await ctx.supabase.rpc("has_role", { _user_id: ctx.userId, _role: "admin" });
-  if (!data) throw new Error("Forbidden");
+async function ensureAdmin(ctx: { supabase: { rpc: (fn: "is_admin") => { single: () => Promise<{ data: boolean | null }> } | Promise<{ data: boolean | null }> } }) {
+  const res = await (ctx.supabase.rpc("is_admin") as Promise<{ data: boolean | null }>);
+  if (!res.data) throw new Error("Forbidden");
 }
 
 export const salesReport = createServerFn({ method: "POST" })
