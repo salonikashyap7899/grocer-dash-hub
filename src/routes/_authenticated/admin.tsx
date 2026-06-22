@@ -1,6 +1,6 @@
 import { Link, Outlet, createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { Leaf, LayoutDashboard, Package, ListTree, ShoppingBag, Users, Settings, ArrowLeft } from "lucide-react";
+import { Leaf, LayoutDashboard, Package, ListTree, ShoppingBag, Users, Settings, ArrowLeft, MapPin, Ticket, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
