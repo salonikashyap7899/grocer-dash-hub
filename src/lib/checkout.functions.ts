@@ -112,7 +112,8 @@ export const placeOrder = createServerFn({ method: "POST" })
       });
       if (!rpRes.ok) throw new Error("Failed to create Razorpay order");
       const rpJson = (await rpRes.json()) as { id: string; amount: number };
-      await supabase.from("orders").update({ razorpay_order_id: rpJson.id }).eq("id", order.id);
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.from("orders").update({ razorpay_order_id: rpJson.id }).eq("id", order.id);
       razorpay = { keyId, orderId: rpJson.id, amount: rpJson.amount };
     }
 
