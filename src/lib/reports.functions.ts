@@ -7,10 +7,6 @@ const rangeSchema = z.object({
   to: z.string().datetime().optional(),
 });
 
-async function ensureAdmin(ctx: { supabase: { rpc: (fn: "is_admin") => { single: () => Promise<{ data: boolean | null }> } | Promise<{ data: boolean | null }> } }) {
-  const res = await (ctx.supabase.rpc("is_admin") as Promise<{ data: boolean | null }>);
-  if (!res.data) throw new Error("Forbidden");
-}
 
 export const salesReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
