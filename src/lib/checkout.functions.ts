@@ -160,7 +160,8 @@ export const clearCartAfterCOD = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { orderId: string }) => z.object({ orderId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await context.supabase.from("orders").update({ status: "confirmed" }).eq("id", data.orderId).eq("user_id", context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("orders").update({ status: "confirmed" }).eq("id", data.orderId).eq("user_id", context.userId);
     await context.supabase.from("cart_items").delete().eq("user_id", context.userId);
     return { ok: true };
   });
