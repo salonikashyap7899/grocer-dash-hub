@@ -86,28 +86,44 @@ function Home() {
       <section className="mx-auto max-w-7xl px-4 py-10">
         <h2 className="text-xl font-bold md:text-2xl">Shop by category</h2>
         <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-7">
-          {categories?.map((c) => (
-            <Link
-              key={c.id}
-              to="/c/$slug"
-              params={{ slug: c.slug }}
-              className="group flex flex-col items-center rounded-xl border bg-card p-3 text-center transition hover:border-primary hover:shadow-md"
-            >
-              <div className="aspect-square w-full overflow-hidden rounded-lg bg-secondary/40">
-                {c.image_url && (
-                  <img src={c.image_url} alt={c.name} className="h-full w-full object-cover transition group-hover:scale-105" />
-                )}
-              </div>
-              <div className="mt-2 text-xs font-medium leading-tight md:text-sm">{c.name}</div>
-            </Link>
-          ))}
+          {!categories
+            ? Array.from({ length: 7 }).map((_, i) => (
+                <div key={i} className="rounded-xl border bg-card p-3">
+                  <div className="aspect-square w-full animate-pulse rounded-lg bg-secondary/60" />
+                  <div className="mx-auto mt-2 h-3 w-3/4 animate-pulse rounded bg-secondary/60" />
+                </div>
+              ))
+            : categories.map((c) => (
+                <Link
+                  key={c.id}
+                  to="/c/$slug"
+                  params={{ slug: c.slug }}
+                  preload="intent"
+                  className="group flex flex-col items-center rounded-xl border bg-card p-3 text-center transition hover:border-primary hover:shadow-md animate-fade-in"
+                >
+                  <div className="aspect-square w-full overflow-hidden rounded-lg bg-secondary/40">
+                    {c.image_url && (
+                      <img src={c.image_url} alt={c.name} loading="lazy" className="h-full w-full object-cover transition group-hover:scale-105" />
+                    )}
+                  </div>
+                  <div className="mt-2 text-xs font-medium leading-tight md:text-sm">{c.name}</div>
+                </Link>
+              ))}
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-6">
         <h2 className="text-xl font-bold md:text-2xl">Featured today</h2>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6">
-          {featured?.map((p) => <ProductCard key={p.id} p={p} />)}
+          {!featured
+            ? Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="rounded-xl border bg-card p-3">
+                  <div className="aspect-square w-full animate-pulse rounded-lg bg-secondary/60" />
+                  <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-secondary/60" />
+                  <div className="mt-2 h-4 w-3/4 animate-pulse rounded bg-secondary/60" />
+                </div>
+              ))
+            : featured.map((p) => <div key={p.id} className="animate-fade-in"><ProductCard p={p} /></div>)}
         </div>
       </section>
     </SiteShell>

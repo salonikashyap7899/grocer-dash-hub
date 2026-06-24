@@ -37,7 +37,7 @@ export function ProductCard({ p }: { p: ProductCardProduct }) {
       toast.error("Out of stock");
       return;
     }
-    upsert.mutate({ productId: p.id, quantity: q });
+    upsert.mutate({ productId: p.id, quantity: q, product: p });
   };
 
   return (

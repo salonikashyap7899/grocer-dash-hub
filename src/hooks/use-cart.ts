@@ -37,7 +37,7 @@ export function useCart() {
   });
 
   const upsert = useMutation({
-    mutationFn: async ({ productId, quantity }: { productId: string; quantity: number }) => {
+    mutationFn: async ({ productId, quantity }: { productId: string; quantity: number; product?: CartRow["product"] }) => {
       if (!user) throw new Error("Please sign in to add items");
       if (quantity <= 0) {
         const { error } = await supabase.from("cart_items").delete().eq("user_id", user.id).eq("product_id", productId);
@@ -52,8 +52,28 @@ export function useCart() {
         );
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["cart"] }),
-    onError: (e: Error) => toast.error(e.message),
+    onMutate: async ({ productId, quantity, product }) => {
+      await qc.cancelQueries({ queryKey: ["cart", user?.id] });
+      const previous = qc.getQueryData<CartRow[]>(["cart", user?.id]) ?? [];
+      const existing = previous.find((i) => i.product_id === productId);
+      let next: CartRow[];
+      if (quantity <= 0) {
+        next = previous.filter((i) => i.product_id !== productId);
+      } else if (existing) {
+        next = previous.map((i) => (i.product_id === productId ? { ...i, quantity } : i));
+      } else if (product) {
+        next = [...previous, { id: `tmp-${productId}`, product_id: productId, quantity, product }];
+      } else {
+        next = previous;
+      }
+      qc.setQueryData(["cart", user?.id], next);
+      return { previous };
+    },
+    onError: (e: Error, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(["cart", user?.id], ctx.previous);
+      toast.error(e.message);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["cart"] }),
   });
 
   const clear = useMutation({
