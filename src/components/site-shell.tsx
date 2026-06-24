@@ -47,8 +47,8 @@ export function SiteShell({ children }: { children: ReactNode }) {
               </div>
             </Link>
 
-            <form onSubmit={onSearch} className="flex-1 min-w-0 max-w-2xl">
-              <div className="relative">
+            <form onSubmit={onSearch} className="hidden md:flex flex-1 min-w-0 max-w-2xl">
+              <div className="relative w-full">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={q}
@@ -59,7 +59,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
               </div>
             </form>
 
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="ml-auto flex shrink-0 items-center gap-2">
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -110,6 +110,18 @@ export function SiteShell({ children }: { children: ReactNode }) {
               </Button>
             </div>
           </div>
+
+          <form onSubmit={onSearch} className="pb-3 md:hidden">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder='Search "milk", "bread"…'
+                className="pl-9 bg-secondary/50 border-transparent focus-visible:bg-background"
+              />
+            </div>
+          </form>
         </div>
       </header>
 
