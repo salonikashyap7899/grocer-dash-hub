@@ -8,3 +8,20 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+
+  - type: static
+    name: grocer-dash-hub-frontend
+    rootDir: .
+    buildCommand: pnpm install && pnpm --filter @workspace/freshcart run build
+    staticPublishPath: ./artifacts/freshcart/dist/public
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BASE_PATH
+        value: /
+      - key: VITE_API_URL
+        value: https://grocer-dash-hub.onrender.com
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        sync: false
