@@ -12,7 +12,7 @@ services:
   - type: static
     name: grocer-dash-hub-frontend
     rootDir: .
-    buildCommand: pnpm install && pnpm --filter @workspace/freshcart run build
+    buildCommand: pnpm install && BASE_PATH=/ VITE_API_URL=https://grocer-dash-hub.onrender.com pnpm --filter @workspace/freshcart run build
     staticPublishPath: ./artifacts/freshcart/dist/public
     envVars:
       - key: NODE_ENV
