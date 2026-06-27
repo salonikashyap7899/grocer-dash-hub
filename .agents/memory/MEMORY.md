@@ -1,0 +1,1 @@
+- [Admin email list](admin-emails.md) — actual admin account is anu783512@gmail.com (not isalonikashyap); both are in ADMIN_EMAILS in admin.tsx
