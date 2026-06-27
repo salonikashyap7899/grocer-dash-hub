@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "FreshCart Grocer"
+version = "1.0.0"
+id = "artifacts/freshcart"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20100
+
+[services.development]
+run = "pnpm --filter @workspace/freshcart run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/freshcart", "run", "build" ]
+publicDir = "artifacts/freshcart/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20100"
+BASE_PATH = "/"
