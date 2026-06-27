@@ -1,1 +1,1 @@
-- [Admin access setup](admin-access.md) — admin gate uses direct supabase.auth.getUser() + ADMIN_EMAILS allowlist in admin.tsx; actual account email discovered via debug display
+- [Admin access setup](admin-access.md) — admin gate uses direct supabase.auth.getUser() to avoid hook race conditions; ADMIN_EMAILS allowlist in admin.tsx
