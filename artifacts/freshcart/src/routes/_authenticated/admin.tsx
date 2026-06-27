@@ -16,7 +16,7 @@ function AdminLayout() {
   const [checked, setChecked] = useState(false);
   const [allowed, setAllowed] = useState(false);
 
-  const ADMIN_EMAILS = ["isalonikashyap@gmail.com"];
+  const ADMIN_EMAILS = ["isalonikashyap@gmail.com", "anu783512@gmail.com"];
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
@@ -39,7 +39,6 @@ function AdminLayout() {
         <div>
           <h1 className="text-xl font-bold">Admin access required</h1>
           <p className="mt-1 text-sm text-muted-foreground">Your account doesn't have admin privileges.</p>
-          <p className="mt-2 text-xs text-muted-foreground bg-muted rounded px-3 py-1 font-mono">Signed in as: {user?.email ?? "unknown"}</p>
           <Button className="mt-4" onClick={() => nav({ to: "/" })}>Back to shop</Button>
         </div>
       </div>
