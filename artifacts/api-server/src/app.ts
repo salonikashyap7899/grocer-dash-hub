@@ -60,8 +60,14 @@ const frontendDistPath = path.resolve(__dirname, "../../artifacts/freshcart/dist
 app.use(express.static(frontendDistPath));
 
 // SPA fallback: serve index.html for all non-API routes
-app.get("*splat", (_req, res) => {
-  res.sendFile(path.join(frontendDistPath, "index.html"));
+app.get("*", (_req, res) => {
+  const indexPath = path.join(frontendDistPath, "index.html");
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      logger.error({ err, indexPath }, "Failed to serve index.html");
+      res.status(404).send("Not Found");
+    }
+  });
 });
 
 export default app;
