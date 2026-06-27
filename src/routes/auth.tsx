@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
-  const { redirect } = Route.useSearch();
+  const { redirect: redirectPath } = Route.useSearch();
   const nav = useNavigate();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [loading, setLoading] = useState(false);
@@ -26,15 +26,30 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
 
-  const go = () => nav({ to: (redirect as string) || "/" });
+  useEffect(() => {
+    // If user is already logged in, redirect them away
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        nav({ to: redirectPath || "/" });
+      }
+    });
+  }, [nav, redirectPath]);
+
+  const go = () => nav({ to: redirectPath || "/" });
 
   const signIn = async () => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      setLoading(false);
+      return toast.error(error.message);
+    }
     toast.success("Welcome back!");
-    go();
+    // Give a small delay for session to propagate
+    setTimeout(() => {
+      setLoading(false);
+      go();
+    }, 500);
   };
 
   const signUp = async () => {
@@ -42,12 +57,15 @@ function AuthPage() {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: window.location.origin, data: { full_name: name } },
+      options: { 
+        emailRedirectTo: window.location.origin + "/auth", 
+        data: { full_name: name } 
+      },
     });
     setLoading(false);
     if (error) return toast.error(error.message);
-    toast.success("Account created!");
-    go();
+    toast.success("Account created! Please check your email or sign in.");
+    setMode("login");
   };
 
   return (
@@ -58,7 +76,7 @@ function AuthPage() {
             <Leaf className="h-5 w-5" />
           </div>
           <div>
-            <div className="font-extrabold">FreshCart</div>
+            <div className="font-extrabold text-xl">FreshCart</div>
             <div className="text-xs text-muted-foreground">Sign in to continue shopping</div>
           </div>
         </div>
