@@ -60,7 +60,7 @@ const frontendDistPath = path.resolve(__dirname, "../../artifacts/freshcart/dist
 app.use(express.static(frontendDistPath));
 
 // SPA fallback: serve index.html for all non-API routes
-app.get("*", (_req, res) => {
+app.get("(.*)", (_req, res) => {
   res.sendFile(path.join(frontendDistPath, "index.html"));
 });
 
