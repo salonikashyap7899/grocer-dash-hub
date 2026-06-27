@@ -25,7 +25,25 @@ app.use(
     },
   }),
 );
-app.use(cors());
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const isDev = process.env.NODE_ENV !== "production";
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || isDev || ALLOWED_ORIGINS.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: origin '${origin}' not allowed`));
+      }
+    },
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

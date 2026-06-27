@@ -8,6 +8,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: ALLOWED_ORIGINS
+        value: https://grocer-dash-hub-frontend.onrender.com
 
   - type: static
     name: grocer-dash-hub-frontend
