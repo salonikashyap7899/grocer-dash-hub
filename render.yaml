@@ -3,7 +3,7 @@ services:
     name: grocer-dash-hub
     runtime: node
     rootDir: .
-    buildCommand: pnpm install && pnpm --filter @workspace/api-server run build
+    buildCommand: pnpm install && BASE_PATH=/ VITE_API_URL=https://grocer-dash-hub.onrender.com VITE_SUPABASE_URL=https://qlawqfpjaopsgmnavhgx.supabase.co VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_2Q99fKIJZG02sP100IIcvg_t4Bmn6iw pnpm --filter @workspace/freshcart run build && pnpm --filter @workspace/api-server run build
     startCommand: NODE_ENV=production node --enable-source-maps ./artifacts/api-server/dist/index.mjs
     envVars:
       - key: NODE_ENV
