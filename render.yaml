@@ -12,7 +12,7 @@ services:
   - type: static
     name: grocer-dash-hub-frontend
     rootDir: .
-    buildCommand: pnpm install && BASE_PATH=/ VITE_API_URL=https://grocer-dash-hub.onrender.com pnpm --filter @workspace/freshcart run build
+    buildCommand: pnpm install && BASE_PATH=/ VITE_API_URL=https://grocer-dash-hub.onrender.com VITE_SUPABASE_URL=https://qlawqfpjaopsgmnavhgx.supabase.co VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_2Q99fKIJZG02sP100IIcvg_t4Bmn6iw pnpm --filter @workspace/freshcart run build
     staticPublishPath: ./artifacts/freshcart/dist/public
     envVars:
       - key: NODE_ENV
@@ -22,6 +22,6 @@ services:
       - key: VITE_API_URL
         value: https://grocer-dash-hub.onrender.com
       - key: VITE_SUPABASE_URL
-        sync: false
+        value: https://qlawqfpjaopsgmnavhgx.supabase.co
       - key: VITE_SUPABASE_PUBLISHABLE_KEY
-        sync: false
+        value: sb_publishable_2Q99fKIJZG02sP100IIcvg_t4Bmn6iw
