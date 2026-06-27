@@ -14,6 +14,14 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 
+const devReactRefreshPreamble = `
+import RefreshRuntime from "/@react-refresh";
+RefreshRuntime.injectIntoGlobalHook(window);
+window.$RefreshReg$ = () => {};
+window.$RefreshSig$ = () => (type) => type;
+window.__vite_plugin_react_preamble_installed__ = true;
+`;
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -74,7 +82,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" },
     ],
-    scripts: [{ src: "https://checkout.razorpay.com/v1/checkout.js", defer: true }],
+    scripts: [
+      ...(import.meta.env.DEV
+        ? [{ type: "module", children: devReactRefreshPreamble }]
+        : []),
+      { src: "https://checkout.razorpay.com/v1/checkout.js", defer: true },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,

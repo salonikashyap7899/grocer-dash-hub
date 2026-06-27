@@ -15,7 +15,6 @@ export default defineConfig({
   },
   // Force enable nitro deploy plugin and set the Vercel preset
   nitro: {
-    entry: "./src/server.ts",
     preset: "vercel-server",
   },
   vite: {
