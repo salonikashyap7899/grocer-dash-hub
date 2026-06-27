@@ -18,4 +18,9 @@ export default defineConfig({
     entry: "./src/server.ts",
     preset: "vercel-server",
   },
+  vite: {
+    server: {
+      allowedHosts: ["grocer-dash-hub.onrender.com"],
+    },
+  },
 });
