@@ -419,6 +419,10 @@ importers:
         version: 3.25.76
 
   artifacts/freshcart-mobile:
+    dependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.108.2
+        version: 2.108.2
     devDependencies:
       '@babel/core':
         specifier: ^7.25.2

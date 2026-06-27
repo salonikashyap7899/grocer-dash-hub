@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "x_E1OnhwH7rVvkebYdyC5"
+uri = "file://artifacts/freshcart-mobile/assets/images/icon.png"
+type = "image"
+title = "generated_image"

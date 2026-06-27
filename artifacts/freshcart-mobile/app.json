@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "FreshCart Mobile",
+    "name": "FreshCart",
     "slug": "freshcart-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,9 +14,12 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.replit.freshcartmobile"
     },
-    "android": {},
+    "android": {
+      "package": "com.replit.freshcartmobile"
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },

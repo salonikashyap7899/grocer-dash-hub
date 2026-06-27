@@ -16,11 +16,21 @@ function AdminLayout() {
   const [checked, setChecked] = useState(false);
   const [allowed, setAllowed] = useState(false);
 
+  const ADMIN_EMAILS = ["isalonikashyap@gmail.com"];
+
   useEffect(() => {
-    if (!user) return;
-    supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle()
-      .then(({ data }) => { setAllowed(!!data); setChecked(true); });
-  }, [user]);
+    supabase.auth.getUser().then(({ data: { user: u } }) => {
+      if (!u) { setChecked(true); return; }
+      const email = (u.email ?? u.user_metadata?.email ?? "").toLowerCase();
+      if (ADMIN_EMAILS.some(e => e.toLowerCase() === email)) {
+        setAllowed(true);
+        setChecked(true);
+        return;
+      }
+      supabase.from("user_roles").select("role").eq("user_id", u.id).eq("role", "admin").maybeSingle()
+        .then(({ data }) => { setAllowed(!!data); setChecked(true); });
+    });
+  }, []);
 
   if (!checked) return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Checking access…</div>;
   if (!allowed) {
@@ -29,6 +39,7 @@ function AdminLayout() {
         <div>
           <h1 className="text-xl font-bold">Admin access required</h1>
           <p className="mt-1 text-sm text-muted-foreground">Your account doesn't have admin privileges.</p>
+          <p className="mt-2 text-xs text-muted-foreground bg-muted rounded px-3 py-1 font-mono">Signed in as: {user?.email ?? "unknown"}</p>
           <Button className="mt-4" onClick={() => nav({ to: "/" })}>Back to shop</Button>
         </div>
       </div>
