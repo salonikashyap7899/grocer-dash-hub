@@ -49,4 +49,14 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
 
+// Root route handler
+app.get("/", (_req, res) => {
+  res.json({ message: "API Server is running", status: "ok" });
+});
+
+// 404 handler for undefined routes
+app.use((_req, res) => {
+  res.status(404).json({ error: "Not Found" });
+});
+
 export default app;
