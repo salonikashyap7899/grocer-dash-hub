@@ -1,1 +1,1 @@
-- [Admin email list](admin-emails.md) — actual admin account is anu783512@gmail.com (not isalonikashyap); both are in ADMIN_EMAILS in admin.tsx
+- [Admin access setup](admin-access.md) — admin gate uses direct supabase.auth.getUser() + ADMIN_EMAILS allowlist in admin.tsx; actual account email discovered via debug display
