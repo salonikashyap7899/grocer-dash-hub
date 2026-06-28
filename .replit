@@ -22,10 +22,12 @@ timeoutMs = 20000
 [userenv]
 
 [userenv.shared]
-VITE_SUPABASE_URL = "https://pjybhwnudltngeamdkbb.supabase.co"
-VITE_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqeWJod251ZGx0bmdlYW1ka2JiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMjgzOTgsImV4cCI6MjA5NzcwNDM5OH0.At7id8Y5Ti0KwzYHXga5AbZdR3hlmgvs-D1Xy2Jxfbw"
+VITE_SUPABASE_URL = "https://qlawqfpjaopsgmnavhgx.supabase.co"
+VITE_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_2Q99fKIJZG02sP100IIcvg_t4Bmn6iw"
 EXPO_PUBLIC_SUPABASE_URL = "https://pjybhwnudltngeamdkbb.supabase.co"
 EXPO_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqeWJod251ZGx0bmdlYW1ka2JiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMjgzOTgsImV4cCI6MjA5NzcwNDM5OH0.At7id8Y5Ti0KwzYHXga5AbZdR3hlmgvs-D1Xy2Jxfbw"
+SUPABASE_URL = "https://qlawqfpjaopsgmnavhgx.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_2Q99fKIJZG02sP100IIcvg_t4Bmn6iw"
 
 [nix]
 channel = "stable-25_05"
