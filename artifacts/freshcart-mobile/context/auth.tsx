@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { registerForPushNotifications, savePushToken, removePushToken } from "@/lib/notifications";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -24,17 +25,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const pushTokenRef = useRef<string | null>(null);
+
+  const registerPushToken = async (userId: string) => {
+    const token = await registerForPushNotifications();
+    if (token) {
+      pushTokenRef.current = token;
+      await savePushToken(userId, token);
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      if (session?.user) {
+        registerPushToken(session.user.id);
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) {
+        registerPushToken(session.user.id);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -51,6 +67,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    if (user && pushTokenRef.current) {
+      await removePushToken(user.id, pushTokenRef.current);
+      pushTokenRef.current = null;
+    }
     await supabase.auth.signOut();
   };
 
