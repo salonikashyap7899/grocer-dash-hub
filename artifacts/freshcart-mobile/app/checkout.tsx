@@ -11,6 +11,8 @@ import { supabase } from "@/lib/supabase";
 
 function fmt(cents: number) { return `₹${(cents / 100).toFixed(0)}`; }
 
+type AppliedCoupon = { code: string; description: string | null; discountCents: number };
+
 export default function CheckoutScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -21,10 +23,55 @@ export default function CheckoutScreen() {
 
   const [form, setForm] = useState({ fullName: "", phone: "", line1: "", line2: "", city: "", state: "", pincode: "" });
   const [loading, setLoading] = useState(false);
+
+  const [couponInput, setCouponInput] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+
   const deliveryCents = totalCents >= 49900 ? 0 : 4900;
-  const grandTotal = totalCents + deliveryCents;
+  const discountCents = appliedCoupon?.discountCents ?? 0;
+  const grandTotal = Math.max(0, totalCents + deliveryCents - discountCents);
 
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  const applyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCouponError(null);
+    setCouponLoading(true);
+    try {
+      const { data: coupon } = await supabase
+        .from("coupons").select("*").eq("code", code).maybeSingle();
+      if (!coupon) throw new Error("Invalid coupon code");
+      if (!coupon.is_active) throw new Error("This coupon is no longer active");
+      if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) throw new Error("Coupon expired");
+      if (totalCents < Math.round(Number(coupon.min_order_amount) * 100)) {
+        throw new Error(`Add items worth ₹${Number(coupon.min_order_amount).toFixed(0)} to use this coupon`);
+      }
+      let discount = 0;
+      if (coupon.type === "flat") {
+        discount = Math.round(Number(coupon.value) * 100);
+      } else {
+        discount = Math.round((totalCents * Number(coupon.value)) / 100);
+        if (coupon.max_discount) discount = Math.min(discount, Math.round(Number(coupon.max_discount) * 100));
+      }
+      discount = Math.min(discount, totalCents);
+      setAppliedCoupon({ code: coupon.code, description: coupon.description ?? null, discountCents: discount });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e: any) {
+      setCouponError(e.message || "Failed to apply coupon");
+      setAppliedCoupon(null);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput("");
+    setCouponError(null);
+  };
 
   const placeOrder = async () => {
     if (!form.fullName || !form.phone || !form.line1 || !form.city || !form.state || !form.pincode) {
@@ -43,7 +90,8 @@ export default function CheckoutScreen() {
         payment_method: "cod",
         subtotal_cents: totalCents,
         delivery_cents: deliveryCents,
-        discount_amount: 0,
+        discount_amount: discountCents / 100,
+        coupon_code: appliedCoupon?.code ?? null,
         total_cents: grandTotal,
         delivery_address: `${form.line1}${form.line2 ? ", " + form.line2 : ""}, ${form.city}, ${form.state} - ${form.pincode}`,
         delivery_name: form.fullName,
@@ -103,6 +151,47 @@ export default function CheckoutScreen() {
             ))}
           </Section>
 
+          <Section title="Promo code" colors={colors}>
+            {appliedCoupon ? (
+              <View style={[styles.appliedRow, { backgroundColor: colors.primary + "12", borderColor: colors.primary }]}>
+                <Feather name="tag" size={15} color={colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.appliedCode, { color: colors.primary }]}>{appliedCoupon.code}</Text>
+                  {appliedCoupon.description ? (
+                    <Text style={[styles.appliedDesc, { color: colors.mutedForeground }]}>{appliedCoupon.description}</Text>
+                  ) : null}
+                </View>
+                <Text style={[styles.appliedDiscount, { color: colors.primary }]}>−{fmt(appliedCoupon.discountCents)}</Text>
+                <Pressable onPress={removeCoupon} style={styles.removeBtn} hitSlop={8}>
+                  <Feather name="x" size={16} color={colors.mutedForeground} />
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.couponRow}>
+                <TextInput
+                  value={couponInput}
+                  onChangeText={(v) => { setCouponInput(v); setCouponError(null); }}
+                  autoCapitalize="characters"
+                  placeholder="Enter promo code"
+                  placeholderTextColor={colors.mutedForeground}
+                  style={[styles.couponInput, { borderColor: couponError ? "#ef4444" : colors.border, backgroundColor: colors.card, color: colors.foreground }]}
+                />
+                <Pressable
+                  onPress={applyCoupon}
+                  disabled={couponLoading || !couponInput.trim()}
+                  style={({ pressed }) => [styles.applyBtn, { backgroundColor: colors.primary, opacity: pressed || couponLoading || !couponInput.trim() ? 0.6 : 1 }]}
+                >
+                  {couponLoading
+                    ? <ActivityIndicator color={colors.primaryForeground} size="small" />
+                    : <Text style={[styles.applyBtnText, { color: colors.primaryForeground }]}>Apply</Text>}
+                </Pressable>
+              </View>
+            )}
+            {couponError ? (
+              <Text style={styles.couponError}>{couponError}</Text>
+            ) : null}
+          </Section>
+
           <Section title="Payment method" colors={colors}>
             <View style={[styles.codRow, { borderColor: colors.primary, backgroundColor: colors.primary + "10" }]}>
               <Feather name="check-circle" size={18} color={colors.primary} />
@@ -128,6 +217,12 @@ export default function CheckoutScreen() {
                 {deliveryCents === 0 ? "FREE" : fmt(deliveryCents)}
               </Text>
             </View>
+            {appliedCoupon ? (
+              <View style={styles.summaryItem}>
+                <Text style={[styles.summaryName, { color: colors.primary }]}>Discount ({appliedCoupon.code})</Text>
+                <Text style={[styles.summaryPrice, { color: colors.primary }]}>−{fmt(appliedCoupon.discountCents)}</Text>
+              </View>
+            ) : null}
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <View style={styles.summaryItem}>
               <Text style={[styles.totalLabel, { color: colors.foreground }]}>Total</Text>
@@ -170,6 +265,16 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 15, fontWeight: "700" as const },
   label: { fontSize: 12, marginBottom: 4 },
   input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14 },
+  couponRow: { flexDirection: "row", gap: 8 },
+  couponInput: { flex: 1, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, letterSpacing: 1 },
+  applyBtn: { borderRadius: 10, paddingHorizontal: 16, alignItems: "center", justifyContent: "center", minWidth: 72 },
+  applyBtnText: { fontSize: 14, fontWeight: "700" as const },
+  couponError: { fontSize: 12, color: "#ef4444", marginTop: -4 },
+  appliedRow: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 10, borderWidth: 1.5, padding: 12 },
+  appliedCode: { fontSize: 14, fontWeight: "700" as const },
+  appliedDesc: { fontSize: 12, marginTop: 1 },
+  appliedDiscount: { fontSize: 14, fontWeight: "700" as const },
+  removeBtn: { padding: 2 },
   codRow: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: 10, borderWidth: 1.5, padding: 12 },
   codText: { fontSize: 14, fontWeight: "500" as const },
   summaryItem: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
