@@ -3,17 +3,40 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { rm, cp } from "node:fs/promises";
+import { execSync } from "node:child_process";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(artifactDir, "../..");
+const freshcartDir = path.resolve(repoRoot, "artifacts/freshcart");
+const distDir = path.resolve(artifactDir, "dist");
+const publicOutDir = path.resolve(distDir, "public");
 
 async function buildAll() {
-  const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
 
+  // Build the frontend (freshcart) into dist/public
+  console.log("Building frontend (freshcart)...");
+  execSync(
+    `pnpm --filter @workspace/freshcart run build`,
+    {
+      cwd: repoRoot,
+      stdio: "inherit",
+      env: {
+        ...process.env,
+        NODE_ENV: "production",
+        BASE_PATH: "/",
+        BUILD_OUT_DIR: publicOutDir,
+      },
+    }
+  );
+  console.log("Frontend built successfully.");
+
+  // Build the API server
+  console.log("Building API server...");
   await esbuild({
     entryPoints: [path.resolve(artifactDir, "src/index.ts")],
     platform: "node",
@@ -118,6 +141,8 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+
+  console.log("API server built successfully.");
 }
 
 buildAll().catch((err) => {
