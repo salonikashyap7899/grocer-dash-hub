@@ -35,3 +35,9 @@ id = "fNEHmp-3gXGq3NKcbSwXp"
 uri = "file://freshcart_schema.txt"
 type = "text"
 title = "FreshCart — Full Database Schema (run in Supabase SQL Editor)"
+
+[[outputs]]
+id = "SRBIYvERQhtW-EwX3Jome"
+uri = "file://freshcart_seed_data.txt"
+type = "text"
+title = "FreshCart — Seed Data (Categories + Products) — Run in Supabase SQL Editor"
