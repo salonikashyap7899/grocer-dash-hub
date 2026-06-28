@@ -1,0 +1,31 @@
+kind = "video"
+previewPath = "/freshcart-video/"
+title = "FreshCart Promo Video"
+version = "1.0.0"
+id = "artifacts/freshcart-video"
+router = "path"
+
+[[integratedSkills]]
+name = "video-js"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/freshcart-video/" ]
+localPort = 21028
+
+[services.development]
+run = "pnpm --filter @workspace/freshcart-video run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/freshcart-video", "run", "build" ]
+publicDir = "artifacts/freshcart-video/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21028"
+BASE_PATH = "/freshcart-video/"

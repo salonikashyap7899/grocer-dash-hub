@@ -1,8 +1,31 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "x_E1OnhwH7rVvkebYdyC5"
 uri = "file://artifacts/freshcart-mobile/assets/images/icon.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "PbEvdlQEW1rd1AKX8virf"
+uri = "file://artifacts/freshcart-video/public/avocado.png"
+type = "image"
+title = "avocado isolated"
+
+[[generated]]
+id = "xliK-8dPSU94dUdp35uK3"
+uri = "file://artifacts/freshcart-video/public/bag.png"
+type = "image"
+title = "brown grocery bag"
+
+[[outputs]]
+id = "i2mrQgkef3d737z98u7cF"
+uri = "file://artifacts/freshcart-video/public/hero-bg.jpg"
+type = "image"
+title = "fresh vegetables on wooden table"
+
+[[outputs]]
+id = "7WLpnjh4_b4OVEMpyWmA9"
+uri = "file://artifacts/freshcart-video/public/audio/bg_music.mp3"
+type = "audio"
+title = "freshcart background music"
