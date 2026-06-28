@@ -29,3 +29,9 @@ id = "7WLpnjh4_b4OVEMpyWmA9"
 uri = "file://artifacts/freshcart-video/public/audio/bg_music.mp3"
 type = "audio"
 title = "freshcart background music"
+
+[[outputs]]
+id = "fNEHmp-3gXGq3NKcbSwXp"
+uri = "file://freshcart_schema.txt"
+type = "text"
+title = "FreshCart — Full Database Schema (run in Supabase SQL Editor)"

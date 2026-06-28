@@ -124,7 +124,7 @@ function AdminProducts() {
         </table>
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={setOpen} modal={false}>
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{form.id ? "Edit product" : "Add product"}</DialogTitle></DialogHeader>
           <div className="grid gap-3 sm:grid-cols-2">
